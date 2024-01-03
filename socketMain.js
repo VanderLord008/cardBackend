@@ -5,15 +5,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(function (req, res, next) {
-  const allowedOrigins = ['http://localhost:5000', 'https://cardbackend.onrender.com','https://tubular-moonbeam-71e070.netlify.app/'];
-      const origin = req.headers.origin;
-      if (allowedOrigins.includes(origin)) {
-           res.setHeader('Access-Control-Allow-Origin', origin);
-      }
-      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-      res.header("Access-Control-Allow-credentials", true);
-      res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, UPDATE");
-      next();
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
 });
 const PORT = 9000;
 const expressServer = app.listen(PORT);
@@ -21,7 +18,7 @@ const expressServer = app.listen(PORT);
 const socketio = require("socket.io");
 const io = socketio(expressServer, {
   cors: {
-    origin: "*",
+    origin: "http://localhost:3000",
     credentials: true,
   },
 });
@@ -73,6 +70,19 @@ io.on("connect", (socket) => {
     for (let i = 0; i < 52; i++) {
       games[gameId].cards.push(i);
     }
+    const game = games[gameId];
+    game.clients.push({
+      clientId: clientId,
+      color: colors[game.clients.length],
+    });
+    //join a team
+    if (game.teamA.length < 2) {
+      game.teamA.push(clientId);
+    } else {
+      game.teamB.push(clientId);
+    }
+    //set the player turn
+    game.playerTurn = game.clients[0];
     //console.log("all games are - ");
     //console.log(games);
     const payload = {
@@ -82,6 +92,8 @@ io.on("connect", (socket) => {
   });
 
   socket.on("joinGame", (data) => {
+    console.log("data");
+    console.log(data);
     const gameID = data.data.gameId;
     const clientId = data.data.playerId;
     const game = games[gameID];
